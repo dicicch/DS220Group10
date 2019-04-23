@@ -39,6 +39,11 @@ return Tier, Medals"
 medals.1 = "Match(n:olympics) where 10<=toInteger(n.age)<=39"
 medals.2 = "Match(n:olympics) where 40<=toInteger(n.age)<=68"
 medals.3 = "Match(n:olympics) where 69<=toInteger(n.age)<=97"
+
+champ.g = "match(m:olympics) where m.Medal ='Gold' and m.Name <> 'null' return count(m) as medalCount, m.ID,m.Name, m.Medal order by medalCount DESC"
+champ.s = "match(m:olympics) where m.Medal ='Silver' and m.Name <> 'null' return count(m) as medalCount, m.ID,m.Name, m.Medal order by medalCount DESC"
+champ.b = "match(m:olympics) where m.Medal ='Bronze' and m.Name <> 'null' return count(m) as medalCount, m.ID,m.Name, m.Medal order by medalCount DESC"
+
 yearclause = "<=toInteger(n.year)<="
 seasonclause = "n.season ="
 # ========================
@@ -78,9 +83,10 @@ ui <- fluidPage(
        HTML('<p style="text-align:center;"><img src="olympic_rings.png" width="640" height="720" align="middle"/></p>')
     ),
     tabPanel("Background",
-             "Hello! Thank you for checking out our Shiny Web App.",
+             h2("Hello! Thank you for checking out our Shiny Web App."),
+             h3("This was created as a school project by Matt Bubbs, Xincheng Zhou, Muthu Nagesh, Shao Hui Lee and Hunter DiCicco."),
              br(),
-             "This was created as a school project by "
+             "We think that the Olympics is something that everyone no matter where you are from can connect with, due to the extreme number of countries that are represented at the Olympics each time, and hope that these summarizations in the data prove to be very interesting and eye-opening as they were for us as well."
              ),
     "Summarization Tools",
     tabPanel("Age Range Performance",
@@ -96,35 +102,47 @@ ui <- fluidPage(
                             startview = "year"
                             ),
              fluidRow(
-               column(width = 12,
+               column(width = 8,
                       selectInput("checkGroup_Age",
-                                         width = '100%',
+                                         width = '20%',
                                          label = "Selected Age Range(s)", 
                                          choices = list("10-39" = 1, "40-68" = 2, "69-97" = 3)
                                          ),
 
                       selectInput("select_Season",
+                                  width = '40%',
                                   label = "Selected Olympic Season",
                                   choices = list("Summer" = "Summer", "Winter" = "Winter"), 
                                   selected = 1
                       ),
-                      
+
                       textOutput("SliderText1"),
-                      
+
                       textOutput("SliderText2"),
-                      
+
                       textOutput("SliderText3")
-                      
-                      # plotOutput("hist_age")
+
                ),
 
                column(width = 12,
-                      plotOutput("hist_age")
+                      tableOutput("age")
                       )
                )
              ),
-    tabPanel("Summarization 1"),
-    tabPanel("Summarization 1")
+    tabPanel("All-Time Champions",
+             titlePanel("All-Time Champion Atheletes"),
+             h3("Who has the most medals?"),
+             selectInput("select_Medal",
+                         width = '40%',
+                         label = "Selected Medal Tier",
+                         choices = list("Bronze" = "Bronze", "Silver" = "Silver", "Gold" = "Gold"),
+                         selected = "Bronze"
+                         ),
+             textOutput("SliderText4"),
+             tableOutput("champ")
+             ),
+    
+    tabPanel("Event Popularity")
     )
 )
 
@@ -155,40 +173,77 @@ server <- function(input, output) {
   observe({
     Seasons$SelectedSeasons = c(as.character(input$select_Season))
   })
-
   
-  # Data = reactiveValues()
-  # observe({
-  #   if (1 %in% Ranges$SelectedRanges) {
-  #     Data$data.age.1 = call_neo4j(con=con,
-  #                             query=paste(medals.1, " and ", Dates$SelectedDates[1], yearclause, Dates$SelectedDates[2], "and", seasonclause, Seasons$SelectedSeasons)
-  #     )
-  #   }  else {Data$data.age.2 = data.frame()}
-  # 
-  #   if (2 %in% Ranges$SelectedRanges) {
-  #     Data$data.age.2 = call_neo4j(con=con,
-  #                             query=paste(medals.2, " and ", Dates$SelectedDates[1], yearclause, Dates$SelectedDates[2], "and", seasonclause, Seasons$SelectedSeasons)
-  #     )
-  #   }  else {Data$data.age.2 = data.frame()}
-  # 
-  #   if (3 %in% Ranges$SelectedRanges) {
-  #     Data$data.age.2 = call_neo4j(con=con,
-  #                             query=paste(medals.3, " and ", Dates$SelectedDates[1], yearclause, Dates$SelectedDates[2], "and", seasonclause, Seasons$SelectedSeasons)
-  #     )
-  #   }  else {Data$data.age.2 = data.frame()}
-  # 
-  #   isolate({sapply(Data, as.data.frame)})
-  #   return(Data)
-  # })
+  age1 = renderTable({
+    setNames(as.data.frame(
+      call_neo4j(con=con,
+                 query = paste(medals.1, " and ", Dates$SelectedDates[1], yearclause, Dates$SelectedDates[2], " and ", seasonclause, "'", Seasons$SelectedSeasons, "' ", return.medals.age, sep="")
+      )
+    ), c("Tier", "Medals"))
+  })
   
-
+  age2 = renderTable({
+    setNames(as.data.frame(
+      call_neo4j(con=con,
+                 query = paste(medals.2, " and ", Dates$SelectedDates[1], yearclause, Dates$SelectedDates[2], " and ", seasonclause, "'", Seasons$SelectedSeasons, "' ", return.medals.age, sep="")
+                 )
+    ), c("Tier", "Medals"))
+  })
+  
+  age3 = renderTable({
+    setNames(as.data.frame(
+      call_neo4j(con=con,
+                 query = paste(medals.3, " and ", Dates$SelectedDates[1], yearclause, Dates$SelectedDates[2], " and ", seasonclause, "'", Seasons$SelectedSeasons, "' ", return.medals.age, sep="")
+      )
+    ), c("Tier", "Medals"))
+  })
+  
+  observe({
+  if (1 %in% Ranges$SelectedRanges) {output$age = age1}
+  else if (2 %in% Ranges$SelectedRanges) {output$age = age2}
+  else if (3 %in% Ranges$SelectedRanges) {output$age = age3}
+  })
+  
+  MedalTier = reactiveValues()
+  observe({
+    MedalTier$SelectedMedals = input$select_Medal
+  })
+  
+  medal1 = renderTable({
+    setNames(as.data.frame(
+      call_neo4j(con=con,
+                 query = champs.b
+      )
+    ), c("Medal Count", "ID", "Name", "Medal"))
+  })
+  
+  medal2 = renderTable({
+    setNames(as.data.frame(
+      call_neo4j(con=con,
+                 query = champs.s
+      )
+    ), c("Medal Count", "ID", "Name", "Medal"))
+  })
+  
+  medal3 = renderTable({
+    setNames(as.data.frame(
+      call_neo4j(con=con,
+                 query = champs.g
+      )
+    ), c("Medal Count", "ID", "Name", "Medal"))
+  })
+  
+  observe({
+    if ("Bronze" %in% MedalTier$SelectedMedal) {output$champ = medal1}
+    else if ("Silver" %in% MedalTier$SelectedMedal) {output$champ = medal2}
+    else if ("Gold" %in% MedalTier$SelectedMedal) {output$champ = medal3}
+  })
+  
   output$SliderText1 <- renderText({paste("Years Selected: ", paste(Dates$SelectedDates, collapse = " - "))})
   output$SliderText2 <- renderText({paste("Age Ranges Selected: ", paste(Ranges$SelectedRanges, collapse = ", "))})
   output$SliderText3 <- renderText({paste("Seasons Selected: ", Seasons$SelectedSeasons)})
-  # output$hist_age <- renderPlot({
-  #   newdata = Data()
-  #   ggplot() + geom_histogram(data=newdata$data.age.1, aes(x = Medals, y = Tier))
-  # })
+  output$SliderText4 = renderText({paste(MedalTier$SelectedMedal, " Champions:")})
+  
   }
 
 # Run the application 
