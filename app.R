@@ -53,7 +53,7 @@ seasonclause = "n.season ="
 # Neo4R Connection Object
 con <- neo4j_api$new(url = "100.25.118.163:33648", 
                      user = "neo4j",
-                     password = "stare-pea-explosion")
+                     password = "stare-pea-explosion") # Password is treated leniently as the sandbox will expire in a few days.
 
 # Load data from CSV only if unimported
 # Capitalize the attributes you need!
@@ -88,7 +88,7 @@ ui <- fluidPage(
              h2("Hello! Thank you for checking out our Shiny Web App."),
              h3("This was created as a school project by Matt Bubb, Xincheng Zhou, Muthu Nagesh, Shao Hui Lee and Hunter DiCicco."),
              br(),
-             "We think that the Olympics is something that everyone no matter where you are from can connect with, due to the extreme number of countries that are represented at the Olympics each time, and hope that these summarizations in the data prove to be very interesting and eye-opening as they were for us as well."
+             "We think that the Olympics is something that everyone, no matter where you are from, can connect with due to the extreme number of countries that are represented at each Olympics. We hope that these summarizations prove as interesting and thoughtful for the viewer as they were for us."
              ),
     "Summarization Tools",
     tabPanel("Age Range Performance",
