@@ -40,9 +40,11 @@ medals.1 = "Match(n:olympics) where 10<=toInteger(n.age)<=39"
 medals.2 = "Match(n:olympics) where 40<=toInteger(n.age)<=68"
 medals.3 = "Match(n:olympics) where 69<=toInteger(n.age)<=97"
 
-champ.g = "match(m:olympics) where m.Medal ='Gold' and m.Name <> 'null' return count(m) as medalCount, m.ID,m.Name, m.Medal order by medalCount DESC"
-champ.s = "match(m:olympics) where m.Medal ='Silver' and m.Name <> 'null' return count(m) as medalCount, m.ID,m.Name, m.Medal order by medalCount DESC"
-champ.b = "match(m:olympics) where m.Medal ='Bronze' and m.Name <> 'null' return count(m) as medalCount, m.ID,m.Name, m.Medal order by medalCount DESC"
+champ.g = "match(m:olympics) where m.medal ='Gold' and m.name <> 'null' return count(m) as medalCount, m.ID, m.name, m.medal order by medalCount DESC limit 10"
+champ.s = "match(m:olympics) where m.medal ='Silver' and m.name <> 'null' return count(m) as medalCount, m.ID, m.name, m.medal order by medalCount DESC limit 10"
+champ.b = "match(m:olympics) where m.medal ='Bronze' and m.name <> 'null' return count(m) as medalCount, m.ID, m.name, m.medal order by medalCount DESC limit 10"
+
+sports = "Match(o:olympics) return count(o) as mostAth, o.sports order by mostAth DESC"
 
 yearclause = "<=toInteger(n.year)<="
 seasonclause = "n.season ="
@@ -59,7 +61,7 @@ if (dim(con$get_labels())[1] == 0) {
   # Stop app if data not found
   if (!file.exists("./dt/athlete_events.csv")) {stopApp("Data not found by R: Could not find ./dt/athlete_events.csv")}
   else{
-  load_csv(on_load="create (a1: olympics {ID: olympics.ID, name: olympics.Name, sex: olympics.sex, age: olympics.Age, heights: olympics.heights, weights: olympics.weights, team: olympics.team, NOC: olympics.NOC, games: olympics.games, year: olympics.Year, season: olympics.Season, city: olympics.city, sports: olympics.sport, event: olympics.event, medal: olympics.Medal });",
+  load_csv(on_load="create (a1: olympics {ID: olympics.ID, name: olympics.Name, sex: olympics.sex, age: olympics.Age, heights: olympics.heights, weights: olympics.weights, team: olympics.team, NOC: olympics.NOC, games: olympics.games, year: olympics.Year, season: olympics.Season, city: olympics.city, sports: olympics.Sport, event: olympics.event, medal: olympics.Medal });",
            con=con,
            url="https://docs.google.com/spreadsheets/d/1-wGtrPbwIMGfwdlyDrcSXeEH0p6n2dEcObCgfl_FiDc/export?format=csv&id=1-wGtrPbwIMGfwdlyDrcSXeEH0p6n2dEcObCgfl_FiDc&gid=1049694386",
            as="olympics",
@@ -84,7 +86,7 @@ ui <- fluidPage(
     ),
     tabPanel("Background",
              h2("Hello! Thank you for checking out our Shiny Web App."),
-             h3("This was created as a school project by Matt Bubbs, Xincheng Zhou, Muthu Nagesh, Shao Hui Lee and Hunter DiCicco."),
+             h3("This was created as a school project by Matt Bubb, Xincheng Zhou, Muthu Nagesh, Shao Hui Lee and Hunter DiCicco."),
              br(),
              "We think that the Olympics is something that everyone no matter where you are from can connect with, due to the extreme number of countries that are represented at the Olympics each time, and hope that these summarizations in the data prove to be very interesting and eye-opening as they were for us as well."
              ),
@@ -142,7 +144,10 @@ ui <- fluidPage(
              tableOutput("champ")
              ),
     
-    tabPanel("Event Popularity")
+    tabPanel("Event Popularity",
+             titlePanel("Most Popular Events Throughout History"),
+             tableOutput("sports")
+             )
     )
 )
 
@@ -204,15 +209,15 @@ server <- function(input, output) {
   else if (3 %in% Ranges$SelectedRanges) {output$age = age3}
   })
   
-  MedalTier = reactiveValues()
+  Medal = reactiveValues()
   observe({
-    MedalTier$SelectedMedals = input$select_Medal
+    Medal$SelectedMedals = input$select_Medal
   })
   
   medal1 = renderTable({
     setNames(as.data.frame(
       call_neo4j(con=con,
-                 query = champs.b
+                 query = champ.b
       )
     ), c("Medal Count", "ID", "Name", "Medal"))
   })
@@ -220,7 +225,7 @@ server <- function(input, output) {
   medal2 = renderTable({
     setNames(as.data.frame(
       call_neo4j(con=con,
-                 query = champs.s
+                 query = champ.s
       )
     ), c("Medal Count", "ID", "Name", "Medal"))
   })
@@ -228,21 +233,29 @@ server <- function(input, output) {
   medal3 = renderTable({
     setNames(as.data.frame(
       call_neo4j(con=con,
-                 query = champs.g
+                 query = champ.g
       )
     ), c("Medal Count", "ID", "Name", "Medal"))
   })
   
   observe({
-    if ("Bronze" %in% MedalTier$SelectedMedal) {output$champ = medal1}
-    else if ("Silver" %in% MedalTier$SelectedMedal) {output$champ = medal2}
-    else if ("Gold" %in% MedalTier$SelectedMedal) {output$champ = medal3}
+    if ("Bronze" %in% Medal$SelectedMedals) {output$champ = medal1}
+    else if ("Silver" %in% Medal$SelectedMedals) {output$champ = medal2}
+    else if ("Gold" %in% Medal$SelectedMedals) {output$champ = medal3}
+  })
+  
+  output$sports = renderTable({
+    setNames(as.data.frame(
+      call_neo4j(con=con,
+                 query = sports
+      )
+    ), c("Number of Athletes", "Event"))
   })
   
   output$SliderText1 <- renderText({paste("Years Selected: ", paste(Dates$SelectedDates, collapse = " - "))})
   output$SliderText2 <- renderText({paste("Age Ranges Selected: ", paste(Ranges$SelectedRanges, collapse = ", "))})
   output$SliderText3 <- renderText({paste("Seasons Selected: ", Seasons$SelectedSeasons)})
-  output$SliderText4 = renderText({paste(MedalTier$SelectedMedal, " Champions:")})
+  output$SliderText4 = renderText({paste(Medal$SelectedMedals, " Champions Top 10:", sep="")})
   
   }
 
